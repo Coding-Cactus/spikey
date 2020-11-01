@@ -1,0 +1,2 @@
+# spikey
+Discord moderation bot
