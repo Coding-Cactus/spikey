@@ -37,40 +37,12 @@ def timeStrToSeconds(time):
 	try:
 		if time[-1] == 's':
 			return int(time[:-1])
-		elif time[-3:] == 'sec':
-			return int(time[:-3])
-		elif time[-4:] == 'secs':
-			return int(time[:-4])
-		elif time[-6:] == 'second':
-			return int(time[:-6])
-		elif time[-7:] == 'seconds':
-			return int(time[:-7])
 		elif time[-1] == 'm':
 			return int(time[:-1]) * 60
-		elif time[-3:] == 'min':
-			return int(time[:-3]) * 60
-		elif time[-4:] == 'mins':
-			return int(time[:-4]) * 60
-		elif time[-6:] == 'minute':
-				return int(time[:-6]) * 60
-		elif time[-7:] == 'minutes':
-			return int(time[:-7]) * 60
 		elif time[-1] == 'h':
 			return int(time[:-1]) * 3600
-		elif time[-2:] == 'hr':
-			return int(time[:-2]) * 3600
-		elif time[-3:] == 'hrs':
-			return int(time[:-3]) * 3600
-		elif time[-4:] == 'hour':
-			return int(time[:-4]) * 3600
-		elif time[-5:] == 'hours':
-			return int(time[:-5]) * 3600
 		elif time[-1] == 'd':
 			return int(time[:-1]) * 3600 * 24
-		elif time[-3:] == 'day':
-			return int(time[:-3]) * 3600 * 24
-		elif time[-4:] == 'days':
-			return int(time[:-4]) * 3600 * 24
 	except ValueError:
 		return 'error'
 	return 'error'
@@ -187,6 +159,19 @@ async def on_member_leave(member):
 	if db['servers'][str(member.guild.id)]['logs'] != 0:
 		await client.get_channel(db['servers'][str(member.guild.id)]['logs']).send(
 			embed=discord.Embed(
+			title='Member joined!!',
+			description='<@' + str(member.id) + '> joined!',
+			color=0x00cc00
+			).set_thumbnail(url=pfp(member.id))
+		)
+
+
+
+@client.event
+async def on_member_leave(member):
+	if db['servers'][str(member.guild.id)]['logs'] != 0:
+		await client.get_channel(db['servers'][str(member.guild.id)]['logs']).send(
+			embed=discord.Embed(
 			title='Member left!!',
 			description='<@' + str(member.id) + '> left!',
 			color=0xcc0000
@@ -205,6 +190,7 @@ async def on_message_delete(message):
 				color=0xcc0000
 			)
 			embed.add_field(name='content', value=message.content)
+			embed.set_footer(text=datetime.datetime.fromtimestamp(time.time()).strftime('%d/%m/%y %H:%M') + ' UTC')
 			embed.set_thumbnail(url=pfp(message.author.id))
 			await client.get_channel(db['servers'][str(message.guild.id)]['logs']).send(embed=embed)
 
@@ -221,6 +207,7 @@ async def on_message_edit(before, after):
 				)
 				embed.add_field(name='before', value=before.content)
 				embed.add_field(name='after', value=after.content)
+				embed.set_footer(text=datetime.datetime.fromtimestamp(time.time()).strftime('%d/%m/%y %H:%M') + ' UTC')
 				embed.set_thumbnail(url=pfp(before.author.id))
 				await client.get_channel(db['servers'][str(before.guild.id)]['logs']).send(embed=embed)
 
@@ -500,14 +487,14 @@ async def infractions(ctx, *, member: discord.Member=None):
 
 			warns = '**__Warns__**\n'
 			for warn in infractions['warns']:
-				warns += "Warn id: **" + warn + '**\nReason: **' + str(infractions['warns'][warn]['reason']) + '**\nDate: **' + datetime.datetime.fromtimestamp(infractions['warns'][warn]['time']).strftime('%Y-%m-%d %H:%M:%S') + '**\n\n'
+				warns += "Warn id: **" + warn + '**\nReason: **' + str(infractions['warns'][warn]['reason']) + '**\nDate: **' + datetime.datetime.fromtimestamp(infractions['warns'][warn]['time']).strftime('%d/%m/%y %H:%M') + '**\n\n'
 
 			if warns == '**__Warns__**\n':
 				warns += 'Member has never been warned.'
 
 			strikes = '**__Strikes__**\n'
 			for strike in infractions['strikes']:
-				strikes += "Strike id: **" + strike + '**\nReason: **' + str(infractions['strikes'][strike]['reason']) + '**\nDate: **' + datetime.datetime.fromtimestamp(infractions['strikes'][strike]['time']).strftime('%Y-%m-%d %H:%M:%S') + '**\n\n'
+				strikes += "Strike id: **" + strike + '**\nReason: **' + str(infractions['strikes'][strike]['reason']) + '**\nDate: **' + datetime.datetime.fromtimestamp(infractions['strikes'][strike]['time']).strftime('%d/%m/%y %H:%M') + '**\n\n'
 
 			if strikes == '**__Strikes__**\n':
 				strikes += 'Member has never been striked.'
@@ -776,7 +763,7 @@ async def view_mutes(ctx):
 	message = ""
 	for guild in db['servers']:
 		if user in db['servers'][guild]['mutes']:
-			message += "**__" + str(await get_guild_from_id(guild)) + "__**\nStart: **" + str(datetime.datetime.fromtimestamp(db['servers'][guild]['mutes'][user]['start']).strftime('%Y-%m-%d %H:%M:%S')) + "**\nDuration: **" + str(db['servers'][guild]['mutes'][user]['duration']) + " seconds**\nTime Left: **" + str(time_left(guild, user)) + " seconds**\n\n"
+			message += "**__" + str(await get_guild_from_id(guild)) + "__**\nStart: **" + str(datetime.datetime.fromtimestamp(db['servers'][guild]['mutes'][user]['start']).strftime('%d/%m/%y %H:%M')) + "**\nDuration: **" + str(db['servers'][guild]['mutes'][user]['duration']) + " seconds**\nTime Left: **" + str(time_left(guild, user)) + " seconds**\n\n"
 	if message == "":
 		message = "You aren't muted in any servers."
 	await ctx.author.send(
@@ -794,7 +781,7 @@ async def view_servers_mutes(ctx):
 		guild = str(ctx.guild.id)
 		message = ""
 		for user in db['servers'][guild]['mutes']:
-			message += "**__" + str(client.get_user(int(user))) + "__**\nStart: **" + str(datetime.datetime.fromtimestamp(db['servers'][guild]['mutes'][user]['start']).strftime('%Y-%m-%d %H:%M:%S')) + "**\nDuration: **" + str(db['servers'][guild]['mutes'][user]['duration']) + " seconds**\nTime Left: **" + str(time_left(guild, user)) + " seconds**\n\n"
+			message += "**__" + str(client.get_user(int(user))) + "__**\nStart: **" + str(datetime.datetime.fromtimestamp(db['servers'][guild]['mutes'][user]['start']).strftime('%d/%m/%y %H:%M')) + "**\nDuration: **" + str(db['servers'][guild]['mutes'][user]['duration']) + " seconds**\nTime Left: **" + str(time_left(guild, user)) + " seconds**\n\n"
 		if message == "":
 			message = "No one is muted in this server."
 		await ctx.author.send(
