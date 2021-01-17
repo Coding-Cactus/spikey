@@ -10,7 +10,7 @@
 - [x] Unmute
 - [x] View Member's Mutes
 - [x] View Server's Mutes
-- [ ] Mute after Warn
-- [ ] Mute after Strike
+- [x] Mute after Warn
+- [x] Mute after Strike
 - [ ] Auto Strike (after certain nunmber of warns)
 - [ ] Auto Ban (after certain number of strikes)
