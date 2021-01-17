@@ -47,30 +47,34 @@ def timeStrToSeconds(time):
 		return "error"
 	return "error"
 
-def seconds_to_real_display(time):	
-	y = str(math.floor(time / (3600 * 24) / 30.436875 / 12) + 1970)
-	m = str(math.floor(time / (3600 * 24) / 30.436875 % 12) + 1)
-	d = str(math.floor(time / (3600 * 24) % 30.436875))
+def seconds_to_real_display(time):
+	if time != "indefinite":
+		y = str(math.floor(time / (3600 * 24) / 30.436875 / 12) + 1970)
+		m = str(math.floor(time / (3600 * 24) / 30.436875 % 12) + 1)
+		d = str(math.floor(time / (3600 * 24) % 30.436875))
 
-	h = str(math.floor(time / 3600 % 24))
-	i = str(math.floor(time % 3600 / 60))
-	s = str(math.floor(time % 3600 % 60))
+		h = str(math.floor(time / 3600 % 24))
+		i = str(math.floor(time % 3600 / 60))
+		s = str(math.floor(time % 3600 % 60))
 
-	if len(m) < 2: m = "0" + m
-	if len(d) < 2: d = "0" + d
+		if len(m) < 2: m = "0" + m
+		if len(d) < 2: d = "0" + d
 
-	if len(h) < 2: h = "0" + h
-	if len(i) < 2: i = "0" + i
-	if len(s) < 2: s = "0" + s
+		if len(h) < 2: h = "0" + h
+		if len(i) < 2: i = "0" + i
+		if len(s) < 2: s = "0" + s
 
-	return f"{d}/{m}/{y} {h}:{i}:{s}"
+		return f"{d}/{m}/{y} {h}:{i}:{s}"
+	return time
 
 def timestamp_to_display(time): # basically without the + 1970
-	time = seconds_to_real_display(time)
-	splitTime = time.split(" ")
-	splitDate = splitTime[0].split("/")
-	date = splitDate[0] + "/" + str(int(splitDate[1]) - 1) + "/" + str(int(splitDate[2]) - 1970)
-	return date + " " + splitTime[1]
+	if time != "indefinite":
+		time = seconds_to_real_display(time)
+		splitTime = time.split(" ")
+		splitDate = splitTime[0].split("/")
+		date = splitDate[0] + "/" + str(int(splitDate[1]) - 1) + "/" + str(int(splitDate[2]) - 1970)
+		return date + " " + splitTime[1]
+	return time
 
 async def get_role_from_id(guild, roleID):
 	for i in guild.roles:
@@ -899,6 +903,7 @@ async def view_mutes(ctx):
 		if user in db["servers"][guild]["mutes"]:
 			start = db["servers"][guild]["mutes"][user]["start"]
 			duration = db["servers"][guild]["mutes"][user]["duration"]
+			end = start + duration if duration != "indefinite" else duration
 			message += "**__" + str(client.get_user(int(user))) + "__**\n"
 			message += "Start: **" + seconds_to_real_display(start) + "**\n"
 			message += "End: **" + seconds_to_real_display(start + duration) + "**\n"
@@ -923,9 +928,10 @@ async def view_servers_mutes(ctx):
 		for user in db["servers"][guild]["mutes"]:
 			start = db["servers"][guild]["mutes"][user]["start"]
 			duration = db["servers"][guild]["mutes"][user]["duration"]
+			end = start + duration if duration != "indefinite" else duration
 			message += "**__" + str(client.get_user(int(user))) + "__**\n"
 			message += "Start: **" + seconds_to_real_display(start) + "**\n"
-			message += "End: **" + seconds_to_real_display(start + duration) + "**\n"
+			message += "End: **" + seconds_to_real_display(end) + "**\n"
 			message += "Duration: **" + timestamp_to_display(duration) + "**\n"
 			message += "Time Left: **" + timestamp_to_display(time_left(guild, user)) + "**\n\n"
 		if message == "":

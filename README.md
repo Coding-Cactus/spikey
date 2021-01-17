@@ -44,5 +44,5 @@
 ### Members
 #### Useable by any server member
 
-- `+infractions` view your infraction
+- `+infractions` view your infractions
 - `+view_mutes` View your current mutes across all the servers you and spikey are in
