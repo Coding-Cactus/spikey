@@ -12,5 +12,6 @@
 - [x] View Server's Mutes
 - [x] Mute after Warn
 - [x] Mute after Strike
-- [ ] Auto Strike (after certain nunmber of warns)
+- [ ] Auto Strike (after certain number of warns)
 - [ ] Auto Ban (after certain number of strikes)
+- [ ] Some sort of archiving system

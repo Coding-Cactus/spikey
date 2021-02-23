@@ -137,6 +137,10 @@ async def check_db():
 			db["servers"][str(guild.id)] = {
 				"logs":0,
 				"mute":0,
+				"warn_mute": 0,
+				"strike_mute": 0,
+				"auto_strike": 0,
+				"auto_ban": 0,
 				"infractions":{},
 				"mutes":{}
 			}
@@ -165,6 +169,8 @@ async def on_guild_join(guild):
 		"mute":0,
 		"warn_mute": 0,
 		"strike_mute": 0,
+		"auto_strike": 0,
+		"auto_ban": 0,
 		"infractions":{},
 		"mutes":{}
 	}
@@ -179,21 +185,21 @@ async def on_member_join(member):
 	if db["servers"][str(member.guild.id)]["logs"] != 0:
 		await client.get_channel(db["servers"][str(member.guild.id)]["logs"]).send(
 			embed=discord.Embed(
-			title="Member joined!!",
-			description="<@" + str(member.id) + "> joined!",
-			color=0x00cc00
+				title="Member joined!!",
+				description="<@" + str(member.id) + "> joined!",
+				color=0x00cc00
 			).set_thumbnail(url=pfp(member.id))
 		)
 
 
 @client.event
-async def on_member_leave(member):
+async def on_member_remove(member):
 	if db["servers"][str(member.guild.id)]["logs"] != 0:
 		await client.get_channel(db["servers"][str(member.guild.id)]["logs"]).send(
 			embed=discord.Embed(
-			title="Member left!!",
-			description="<@" + str(member.id) + "> left!",
-			color=0xcc0000
+				title="Member left!!",
+				description="<@" + str(member.id) + "> left!",
+				color=0xcc0000
 			).set_thumbnail(url=pfp(member.id))
 		)
 
@@ -403,7 +409,7 @@ async def config_warn_mute(ctx, time=None):
 				await ctx.send(
 					embed=discord.Embed(
 						title="Warn Mute Configured!",
-						description="When a user is warned, they will be muted for " + str(time) + " seconds",
+						description="When a member is warned, they will be muted for **" + timestamp_to_display(time) + "**",
 						color=0x00cc00
 					)
 				)
@@ -444,7 +450,7 @@ async def config_strike_mute(ctx, time=None):
 				await ctx.send(
 					embed=discord.Embed(
 						title="Strike Mute Configured!",
-						description="When a user is struck, they will be muted for " + str(time) + " seconds",
+						description="When a member is struck, they will be muted for **" + timestamp_to_display(time) + "**",
 						color=0x00cc00
 					)
 				)
@@ -473,43 +479,128 @@ async def config_strike_mute(ctx, time=None):
 			)
 		)
 
-	
-
 
 @client.command()
-async def warn(ctx, member: discord.Member=None, reason=None):
-	if ctx.message.author.guild_permissions.manage_messages:
-		if member != None:
-			if str(member.id) not in db["servers"][str(ctx.guild.id)]["infractions"]:
-				db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]= {
-					"warns":{},
-					"strikes":{}
-				}
+async def config_auto_strike(ctx, num=None):	
+	if ctx.message.author.guild_permissions.administrator:
+		if num != None:
+			try:
+				num = int(num)
+				correct = num > 0
+			except:
+				correct = False
+			if correct:
+				db["servers"][str(ctx.guild.id)]["auto_strike"] = num
 				db.save()
-			warns = db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["warns"]
-			highest = 0
-			for warn in warns:
-				if int(warn) > highest:
-					highest = int(warn)
-			db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["warns"][str(highest+1)] = {
-				"moderator": ctx.author.id,
-				"reason":reason,
-				"time": time.time()
-			}
-			db.save()
+				await ctx.send(
+					embed=discord.Embed(
+						title="Auto Strike Configured!",
+						description="If a member recieves " + str(num) + " warnings, they will be struck",
+						color=0x00cc00
+					)
+				)
+			else:
+				await ctx.send(
+					embed=discord.Embed(
+						title="Error",
+						description="Invalid number entered",
+						color=0xcc0000
+					)
+				)
+		else:
 			await ctx.send(
 				embed=discord.Embed(
-					title="Warn",
-					description=str(member) + " warned for: **" + str(reason) + "**",
+					title="Error",
+					description="You did not provide a number",
 					color=0xcc0000
 				)
 			)
-			duration = db["servers"][str(ctx.guild.id)]["warn_mute"]
+	else:
+		await ctx.send(
+			embed=discord.Embed(
+				title="Error",
+				description="You are not an admin of this server",
+				color=0xcc0000
+			)
+		)
+
+
+@client.command()
+async def config_auto_ban(ctx, num=None):	
+	if ctx.message.author.guild_permissions.administrator:
+		if num != None:
+			try:
+				num = int(num)
+				correct = num > 0
+			except:
+				correct = False
+			if correct:
+				db["servers"][str(ctx.guild.id)]["auto_ban"] = num
+				db.save()
+				await ctx.send(
+					embed=discord.Embed(
+						title="Auto Ban Configured!",
+						description="If a member recieves " + str(num) + " strikes, they will be banned",
+						color=0x00cc00
+					)
+				)
+			else:
+				await ctx.send(
+					embed=discord.Embed(
+						title="Error",
+						description="Invalid number entered",
+						color=0xcc0000
+					)
+				)
+		else:
+			await ctx.send(
+				embed=discord.Embed(
+					title="Error",
+					description="You did not provide a number",
+					color=0xcc0000
+				)
+			)
+	else:
+		await ctx.send(
+			embed=discord.Embed(
+				title="Error",
+				description="You are not an admin of this server",
+				color=0xcc0000
+			)
+		)
+	
+
+async def check_auto_ban(ctx, member):
+	guildID = str(ctx.guild.id)
+	if db["servers"][guildID]["auto_ban"] != 0:
+		if len(db["servers"][guildID]["infractions"][str(member.id)]["warns"]) >= db["servers"][guildID]["auto_ban"]:
+			await member.send(
+				embed=discord.Embed(
+					title="Ban",
+					description="You have been automatically bannes as you have **" + str(len(db["servers"][guildID]["infractions"][str(member.id)]["strikes"])) + " strikes**",
+					color=0xcc0000
+				)
+			)
+			await ctx.guild.ban(member, reason=str(len(db["servers"][guildID]["infractions"][str(member.id)]["strikes"])) + " strikes")
+
+
+async def check_auto_strike(ctx, member):
+	guildID = str(ctx.guild.id)
+	if db["servers"][guildID]["auto_strike"] != 0:
+		if len(db["servers"][guildID]["infractions"][str(member.id)]["warns"]) % db["servers"][guildID]["auto_strike"] == 0:
+			await member.send(
+				embed=discord.Embed(
+					title="Strike",
+					description="You have been automatically struck as you have **" + str(len(db["servers"][guildID]["infractions"][str(member.id)]["warns"])) + " warnings**",
+					color=0xcc0000
+				)
+			)
+			duration = db["servers"][guildID]["strike_mute"]
 			if duration != 0:
-				role = await get_role_from_id(ctx.guild, db["servers"][str(ctx.guild.id)]["mute"])
+				role = await get_role_from_id(ctx.guild, db["servers"][guildID]["mute"])
 				if role != "error":
 					await member.add_roles(role)
-					db["servers"][str(ctx.guild.id)]["mutes"][str(member.id)] = {
+					db["servers"][guildID]["mutes"][str(member.id)] = {
 						"start": time.time(),
 						"duration": duration
 					}
@@ -522,6 +613,76 @@ async def warn(ctx, member: discord.Member=None, reason=None):
 						color=0xcc0000
 					)
 				)
+			await check_auto_ban(guildID, member)
+
+
+@client.command()
+async def warn(ctx, member: discord.Member=None, *, reason=None):
+	if ctx.message.author.guild_permissions.manage_messages:
+		if member != None:
+			if len(reason) < 2000:
+				if str(member.id) not in db["servers"][str(ctx.guild.id)]["infractions"]:
+					db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]= {
+						"warns":{},
+						"strikes":{}
+					}
+					db.save()
+				warns = db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["warns"]
+				highest = 0
+				for warn in warns:
+					if int(warn) > highest:
+						highest = int(warn)
+				db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["warns"][str(highest+1)] = {
+					"moderator": ctx.author.id,
+					"reason":reason,
+					"time": time.time()
+				}
+				db.save()
+				await ctx.send(
+					embed=discord.Embed(
+						title="Warn",
+						description=str(member) + " warned for: **" + str(reason) + "**",
+						color=0xcc0000
+					)
+				)
+				message = "You have been warned for **" + reason + "**"
+				role = "error"
+				duration = db["servers"][str(ctx.guild.id)]["warn_mute"]
+				if duration != 0:
+					role = await get_role_from_id(ctx.guild, db["servers"][str(ctx.guild.id)]["mute"])
+					if role != "error":
+						await member.add_roles(role)
+						db["servers"][str(ctx.guild.id)]["mutes"][str(member.id)] = {
+							"start": time.time(),
+							"duration": duration
+						}
+						db.save()
+				else:
+					await ctx.send(
+						embed=discord.Embed(
+							title="Error",
+							description="Your mute role is set up incorrectly, do `+config_mute Role`.",
+							color=0xcc0000
+						)
+					)
+				if role != "error":
+					message += "\nYou have been muted for **" + str(timestamp_to_display(db["servers"][str(ctx.guild.id)]["warn_mute"])) + "**"
+				await member.send(
+					embed=discord.Embed(
+						title="Warn",
+						description=message,
+						color=0xcc0000
+					)
+				)
+				await check_auto_strike(ctx, member)
+			else:
+				await ctx.send(
+					embed=discord.Embed(
+						title="Error",
+						description="Reason must be less than 2000 characters",
+						color=0xcc0000
+					)
+				)				
 		else:
 			await ctx.send(
 				embed=discord.Embed(
@@ -542,51 +703,72 @@ async def warn(ctx, member: discord.Member=None, reason=None):
 
 
 @client.command()
-async def strike(ctx, member: discord.Member=None, reason=None):
+async def strike(ctx, member: discord.Member=None, *, reason=None):
 	if ctx.message.author.guild_permissions.manage_messages:
 		if member != None:
-			if str(member.id) not in db["servers"][str(ctx.guild.id)]["infractions"]:
-				db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]= {
-					"warns":{},
-					"strikes":{}
-				}
-				db.save()
-			strikes = db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["strikes"]
-			highest = 0
-			for strike in strikes:
-				if int(strike) > highest:
-					highest = int(strike)
-			db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["strikes"][str(highest+1)] = {
-				"moderator": ctx.author.id,
-				"reason":reason,
-				"time": time.time()
-			}
-			db.save()
-			await ctx.send(
-				embed=discord.Embed(
-					title="Strike",
-					description=str(member) + " struck for: **" + str(reason) + "**",
-					color=0xcc0000
-				)
-			)
-			duration = db["servers"][str(ctx.guild.id)]["strike_mute"]
-			if duration != 0:
-				role = await get_role_from_id(ctx.guild, db["servers"][str(ctx.guild.id)]["mute"])
-				if role != "error":
-					await member.add_roles(role)
-					db["servers"][str(ctx.guild.id)]["mutes"][str(member.id)] = {
-						"start": time.time(),
-						"duration": duration
+			if len(reason) < 2000:
+				if str(member.id) not in db["servers"][str(ctx.guild.id)]["infractions"]:
+					db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]= {
+						"warns":{},
+						"strikes":{}
 					}
 					db.save()
-			else:
+				strikes = db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["strikes"]
+				highest = 0
+				for strike in strikes:
+					if int(strike) > highest:
+						highest = int(strike)
+				db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]["strikes"][str(highest+1)] = {
+					"moderator": ctx.author.id,
+					"reason":reason,
+					"time": time.time()
+				}
+				db.save()
+				await ctx.send(
+					embed=discord.Embed(
+						title="Strike",
+						description=str(member) + " struck for: **" + str(reason) + "**",
+						color=0xcc0000
+					)
+				)
+				message = "You have been struck for **" + reason + "**"
+				role = "error"
+				duration = db["servers"][str(ctx.guild.id)]["strike_mute"]
+				if duration != 0:
+					role = await get_role_from_id(ctx.guild, db["servers"][str(ctx.guild.id)]["mute"])
+					if role != "error":
+						await member.add_roles(role)
+						db["servers"][str(ctx.guild.id)]["mutes"][str(member.id)] = {
+							"start": time.time(),
+							"duration": duration
+						}
+						db.save()
+				else:
+					await ctx.send(
+						embed=discord.Embed(
+							title="Error",
+							description="Your mute role is set up incorrectly, do `+config_mute Role`.",
+							color=0xcc0000
+						)
+					)
+				if role != "error":
+					message += "\nYou have been muted for **" + str(timestamp_to_display(db["servers"][str(ctx.guild.id)]["strike_mute"])) + "**"
+				await member.send(
+					embed=discord.Embed(
+						title="Strike",
+						description=message,
+						color=0xcc0000
+					)
+				)
+				await check_auto_ban(ctx, member)
+			else:				
 				await ctx.send(
 					embed=discord.Embed(
 						title="Error",
-						description="Your mute role is set up incorrectly, do `+config_mute Role`.",
+						description="Reason must be less than 2000 characters",
 						color=0xcc0000
 					)
-				)			
+				)
 		else:
 			await ctx.send(
 				embed=discord.Embed(
@@ -625,14 +807,37 @@ async def infractions(ctx, *, member: discord.Member=None):
 
 			warns = "**__Warns__**\n"
 			for warn in infractions["warns"]:
-				warns += "Warn id: **" + warn + "**\nReason: **" + str(infractions["warns"][warn]["reason"]) + "**\nDate: **" + datetime.datetime.fromtimestamp(infractions["warns"][warn]["time"]).strftime("%d/%m/%y %H:%M") + "**\n\n"
+				newWarn = "Warn id: **" + warn + "**\nReason: **" + str(infractions["warns"][warn]["reason"]) + "**\nDate: **" + datetime.datetime.fromtimestamp(infractions["warns"][warn]["time"]).strftime("%d/%m/%y %H:%M") + "**\n\n"
+				if len(warns + newWarn) < 2040:
+					warns += newWarn
+				else:
+					await ctx.author.send(
+						embed=discord.Embed(
+							title=username + "'s infractions",
+							description=warns,
+							color=0x00cc00
+						).set_thumbnail(url=pfp(user))
+					)
+					warns = newWarn
 
 			if warns == "**__Warns__**\n":
 				warns += "Member has never been warned."
 
 			strikes = "**__Strikes__**\n"
 			for strike in infractions["strikes"]:
-				strikes += "Strike id: **" + strike + "**\nReason: **" + str(infractions["strikes"][strike]["reason"]) + "**\nDate: **" + datetime.datetime.fromtimestamp(infractions["strikes"][strike]["time"]).strftime("%d/%m/%y %H:%M") + "**\n\n"
+				newStrike = "Strike id: **" + strike + "**\nReason: **" + str(infractions["strikes"][strike]["reason"]) + "**\nDate: **" + datetime.datetime.fromtimestamp(infractions["strikes"][strike]["time"]).strftime("%d/%m/%y %H:%M") + "**\n\n"
+				if len(warns + strikes + newStrike) < 2040:
+					strikes += newStrike
+				else:
+					await ctx.author.send(
+						embed=discord.Embed(
+							title=username + "'s infractions",
+							description=warns + strikes,
+							color=0x00cc00
+						).set_thumbnail(url=pfp(user))
+					)
+					strikes = newStrike
+					warns = ""
 
 			if strikes == "**__Strikes__**\n":
 				strikes += "Member has never been struck."
@@ -663,12 +868,11 @@ async def infractions(ctx, *, member: discord.Member=None):
 
 
 @client.command()
-async def repeal_warn(ctx, member: discord.Member=None):
+async def repeal_warn(ctx, member: discord.Member=None, num=None):
 	if ctx.message.author.guild_permissions.manage_messages:
 		if member != None:
 			try:
-				num = int(ctx.message.content.split(" ")[-1])
-				num = str(num)
+				int(num)
 				correct = True
 			except:
 				correct = False
@@ -679,6 +883,13 @@ async def repeal_warn(ctx, member: discord.Member=None):
 					if num in db["servers"][guildID]["infractions"][memberID]["warns"]:
 						del db["servers"][guildID]["infractions"][memberID]["warns"][num]
 						db.save()
+						await ctx.send(
+							embed=discord.Embed(
+								title="Warn Repealed",
+								description="Warn id **" + num + "** repealed",
+								color=0x00cc00
+							)
+						)
 					else:
 						await ctx.send(
 							embed=discord.Embed(
@@ -802,7 +1013,7 @@ async def mute(ctx, member: discord.Member=None, duration=None):
 						db.save()
 						embed=discord.Embed(
 							title="Muted",
-							description=str(member) + " has been muted for **" + str(duration) + " seconds**.",
+							description=str(member) + " has been muted for **" + timestamp_to_display(duration) + "**",
 							color=0x00cc00
 						)
 						await ctx.send(embed=embed)
@@ -906,7 +1117,7 @@ async def view_mutes(ctx):
 			end = start + duration if duration != "indefinite" else duration
 			message += "**__" + str(client.get_user(int(user))) + "__**\n"
 			message += "Start: **" + seconds_to_real_display(start) + "**\n"
-			message += "End: **" + seconds_to_real_display(start + duration) + "**\n"
+			message += "End: **" + seconds_to_real_display(end) + "**\n"
 			message += "Duration: **" + timestamp_to_display(duration) + "**\n"
 			message += "Time Left: **" + timestamp_to_display(time_left(guild, user)) + "**\n\n"
 	if message == "":
@@ -951,6 +1162,7 @@ async def view_servers_mutes(ctx):
 				color=0xcc0000
 			)
 		)
+
 
 server.s()
 client.run(os.getenv("token"))
