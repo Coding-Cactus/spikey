@@ -1210,27 +1210,36 @@ async def nickname(ctx, *, name=None):
 	if nicknameChannel != 0:
 		if name != None:
 			userId = str(ctx.message.author.id)
-			msg = await client.get_channel(nicknameChannel).send(
-				embed=discord.Embed(
-					title="Nickname Requested!",
-					description="<@" + userId + "> requested the nickname `" + name + "`",
-					color=0xcccc00
+			if len(name) <= 32:
+				msg = await client.get_channel(nicknameChannel).send(
+					embed=discord.Embed(
+						title="Nickname Requested!",
+						description="<@" + userId + "> requested the nickname `" + name + "`",
+						color=0xcccc00
+					)
 				)
-			)
-			await msg.add_reaction("👍")
-			await msg.add_reaction("👎")
-			db["servers"][serverId]["nicknames"][str(msg.id)] = {
-				"userId": int(userId),
-				"nickname": name
-			}
-			db.save()
-			await client.get_user(int(userId)).send(
-				embed=discord.Embed(
-					title="Nickname Requested!",
-					description="You have requested the nickname `" + name + "`. A moderator will either accept or deny it shortly.",
-					color=0xcccc00
+				await msg.add_reaction("👍")
+				await msg.add_reaction("👎")
+				db["servers"][serverId]["nicknames"][str(msg.id)] = {
+					"userId": int(userId),
+					"nickname": name
+				}
+				db.save()
+				await client.get_user(int(userId)).send(
+					embed=discord.Embed(
+						title="Nickname Requested!",
+						description="You have requested the nickname `" + name + "`. A moderator will either accept or deny it shortly.",
+						color=0xcccc00
+					)
 				)
-			)
+			else:
+				await ctx.send(
+					embed=discord.Embed(
+						title="Error",
+						description="Nickname must be 32 characters or less",
+						color=0xcc0000
+					)
+				)
 		else:
 			await ctx.send(
 				embed=discord.Embed(
@@ -1259,28 +1268,37 @@ async def on_reaction_add(reaction, user):
 			if channelId == str(db["servers"][guildId]["nicknames_channel"]) and messageId in db["servers"][guildId]["nicknames"]:
 				member = await get_member_from_id(reaction.message.guild, db["servers"][guildId]["nicknames"][messageId]["userId"])
 				if str(reaction) == "👍":
-					await member.edit(nick=db["servers"][guildId]["nicknames"][messageId]["nickname"])
-					await reaction.message.edit(
-						embed=discord.Embed(
-							title="Nickname Requested!",
-							description="<@" + userId + "> requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "`",
-							color=0x00cc00
-						).set_footer(text="Approved by " + str(user))
-					)
-					await client.get_user(db["servers"][guildId]["nicknames"][messageId]["userId"]).send(
-						embed=discord.Embed(
-							title="Nickname Approved!",
-							description="You requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "` and it has been approved.",
-							color=0x00cc00
+					try:
+						await member.edit(nick=db["servers"][guildId]["nicknames"][messageId]["nickname"])
+						await reaction.message.edit(
+							embed=discord.Embed(
+								title="Nickname Requested!",
+								description="<@" + str(db["servers"][guildId]["nicknames"][messageId]["userId"]) + "> requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "`",
+								color=0x00cc00
+							).set_footer(text="Approved by " + str(user))
+						)						
+						await client.get_user(db["servers"][guildId]["nicknames"][messageId]["userId"]).send(
+							embed=discord.Embed(
+								title="Nickname Approved!",
+								description="You requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "` and it has been approved.",
+								color=0x00cc00
+							)
 						)
-					)
-					del db["servers"][guildId]["nicknames"][messageId]
-					db.save()
+						del db["servers"][guildId]["nicknames"][messageId]
+						db.save()
+					except discord.errors.Forbidden:
+						await reaction.message.channel.send(
+							embed=discord.Embed(
+								title="Error",
+								description="I do not have high enough permissions to change <@" + str(db["servers"][guildId]["nicknames"][messageId]["userId"]) + ">'s nickname",
+								color=0xcc0000
+							)
+						)
 				elif str(reaction) == "👎":
 					await reaction.message.edit(
 						embed=discord.Embed(
 							title="Nickname Requested!",
-							description="<@" + userId + "> requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "`",
+							description="<@" + str(db["servers"][guildId]["nicknames"][messageId]["userId"]) + "> requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "`",
 							color=0xcc0000
 						).set_footer(text="Denied by " + str(user))
 					)

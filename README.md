@@ -35,7 +35,7 @@
 ### Muting
 #### Only useable by server moderators (except `+view_mutes`)
 
-- `+mute Member <time>`Aadds the muted role (set by `config_mute`) to the for a specified time
+- `+mute Member <time>`Adds the muted role (set by `config_mute`) to the for a specified time
   > If time is omitted, they will be muted indefinitely
 - `+unmute Member` removes the muted role (set by `config_mute`) from a member
 - `+view_mutes` View your current mutes across all the servers you and spikey are in
