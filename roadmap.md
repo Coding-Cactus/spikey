@@ -14,4 +14,5 @@
 - [x] Mute after Strike
 - [ ] Auto Strike (after certain number of warns)
 - [ ] Auto Ban (after certain number of strikes)
+- [x] nickname request system
 - [ ] Some sort of archiving system

@@ -135,12 +135,14 @@ async def check_db():
 	for guild in client.guilds:
 		if str(guild.id) not in db["servers"]:
 			db["servers"][str(guild.id)] = {
-				"logs":0,
-				"mute":0,
+				"logs": 0,
+				"mute": 0,
 				"warn_mute": 0,
 				"strike_mute": 0,
 				"auto_strike": 0,
 				"auto_ban": 0,
+				"nicknames_channel": 0,
+				"nicknames": {},
 				"infractions":{},
 				"mutes":{}
 			}
@@ -165,12 +167,14 @@ async def on_command_error(ctx, error):
 @client.event
 async def on_guild_join(guild):
 	db["servers"][str(guild.id)] = {
-		"logs":0,
-		"mute":0,
+		"logs": 0,
+		"mute" :0,
 		"warn_mute": 0,
 		"strike_mute": 0,
 		"auto_strike": 0,
 		"auto_ban": 0,
+		"nicknames_channel": 0,
+		"nicknames": {},
 		"infractions":{},
 		"mutes":{}
 	}
@@ -286,14 +290,15 @@ async def help(ctx, catagory=None):
 				embed.add_field(name="config_mute", value="Choose which role to be addded to a member when muted.\nIn the form `+config_mute Role`.", inline=False)
 				embed.add_field(name="config_warn_mute", value="Choose for how long a member will be muted after being warned.\nIn the form `+config_warn_mute time`.", inline=False)
 				embed.add_field(name="config_strike_mute", value="Choose for how long a member will be muted after being struck.\nIn the form `+config_strike_mute time`.", inline=False)
+				embed.add_field(name="config_nicknames", value="Choose to which channel I should send the nickname requests.\nIn the form `+config_nicknames TextChannel`.", inline=False)
 				embed.set_footer(text="These commands can only be used by server admins")
 			elif catagory == "infractions":
 				embed = discord.Embed(
 					title="Infraction Commands",
 					color=0x00cc00
 				)
-				embed.add_field(name="warn", value="Warn a member for being naughty.\nIn the form `+warn Member <\"reason\">`.", inline=False)
-				embed.add_field(name="strike", value="sStrike a member for being naughty.\nIn the form `+strike Member <\"reason\">`.", inline=False)
+				embed.add_field(name="warn", value="Warn a member for being naughty.\nIn the form `+warn Member <reason>`.", inline=False)
+				embed.add_field(name="strike", value="sStrike a member for being naughty.\nIn the form `+strike Member <reason>`.", inline=False)
 				embed.add_field(name="infractions", value="View your infractions from this server. Moderators can do `+infractions Member` to view another member's infractions. Must allow DMs from me.", inline=False)
 				embed.set_footer(text="These commands can only be used by server moderators (except the infractions command)")
 			elif catagory == "repealing":
@@ -321,6 +326,7 @@ async def help(ctx, catagory=None):
 				)
 				embed.add_field(name="infractions", value="View your infractions from this server. Moderators can do `+infractions Member` to view another member's infractions. Must allow DMs from me.", inline=False)
 				embed.add_field(name="view_mutes", value="View your current mutes across all the servers that I am in. Must allow DMs from me.", inline=False)
+				embed.add_field(name="nickname", value="Request a nickname to have in this server.\nIn the form `+nickname Name`", inline=False)
 				embed.set_footer(text="These commands can be used by any server member")
 			await ctx.send(embed=embed)
 		else:
@@ -368,7 +374,7 @@ async def config_logs(ctx,  *, channel: discord.TextChannel=None):
 
 
 @client.command()
-async def config_mute(ctx,  *, role: discord.Role=None):
+async def config_mute(ctx, *, role: discord.Role=None):
 	if ctx.message.author.guild_permissions.administrator:
 		if role != None:
 			db["servers"][str(ctx.guild.id)]["mute"] = role.id
@@ -568,6 +574,38 @@ async def config_auto_ban(ctx, num=None):
 				color=0xcc0000
 			)
 		)
+
+
+@client.command()
+async def config_nicknames(ctx, *, channel: discord.TextChannel=None):
+	if ctx.message.author.guild_permissions.administrator:
+		if channel != None:
+			db["servers"][str(ctx.guild.id)]["nicknames_channel"] = channel.id
+			db.save()
+			await ctx.send(
+				embed=discord.Embed(
+					title="Nicknames configured!",
+					description="The nickname request channel for this server has been set to <#" + str(channel.id) + ">",
+					color=0x00cc00
+				)
+			)
+		else:
+			await ctx.send(
+				embed=discord.Embed(
+					title="Error",
+					description="You did not provide a channel",
+					color=0xcc0000
+				)
+			)
+	else:
+		await ctx.send(
+			embed=discord.Embed(
+				title="Error",
+				description="You are not an admin of this server",
+				color=0xcc0000
+			)
+		)
+
 	
 
 async def check_auto_ban(ctx, member):
@@ -1162,6 +1200,100 @@ async def view_servers_mutes(ctx):
 				color=0xcc0000
 			)
 		)
+
+
+
+@client.command()
+async def nickname(ctx, *, name=None):
+	serverId = str(ctx.guild.id)
+	nicknameChannel = db["servers"][serverId]["nicknames_channel"]
+	if nicknameChannel != 0:
+		if name != None:
+			userId = str(ctx.message.author.id)
+			msg = await client.get_channel(nicknameChannel).send(
+				embed=discord.Embed(
+					title="Nickname Requested!",
+					description="<@" + userId + "> requested the nickname `" + name + "`",
+					color=0xcccc00
+				)
+			)
+			await msg.add_reaction("👍")
+			await msg.add_reaction("👎")
+			db["servers"][serverId]["nicknames"][str(msg.id)] = {
+				"userId": int(userId),
+				"nickname": name
+			}
+			db.save()
+			await client.get_user(int(userId)).send(
+				embed=discord.Embed(
+					title="Nickname Requested!",
+					description="You have requested the nickname `" + name + "`. A moderator will either accept or deny it shortly.",
+					color=0xcccc00
+				)
+			)
+		else:
+			await ctx.send(
+				embed=discord.Embed(
+					title="Error",
+					description="You did not provide a nickname",
+					color=0xcc0000
+				)
+			)
+	else:
+		await ctx.send(
+			embed=discord.Embed(
+				title="Error",
+				description="Nickname requests have not been set up yet. Get an admin to do `+config_nicknames`",
+				color=0xcc0000
+			)
+		)
+
+@client.event
+async def on_reaction_add(reaction, user):
+	userId = str(user.id)
+	if userId != str(client.user.id):
+		messageId = str(reaction.message.id)
+		channelId = str(reaction.message.channel.id)
+		guildId = str(reaction.message.guild.id)
+		if user.guild_permissions.manage_messages:
+			if channelId == str(db["servers"][guildId]["nicknames_channel"]) and messageId in db["servers"][guildId]["nicknames"]:
+				member = await get_member_from_id(reaction.message.guild, db["servers"][guildId]["nicknames"][messageId]["userId"])
+				if str(reaction) == "👍":
+					await member.edit(nick=db["servers"][guildId]["nicknames"][messageId]["nickname"])
+					await reaction.message.edit(
+						embed=discord.Embed(
+							title="Nickname Requested!",
+							description="<@" + userId + "> requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "`",
+							color=0x00cc00
+						).set_footer(text="Approved by " + str(user))
+					)
+					await client.get_user(db["servers"][guildId]["nicknames"][messageId]["userId"]).send(
+						embed=discord.Embed(
+							title="Nickname Approved!",
+							description="You requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "` and it has been approved.",
+							color=0x00cc00
+						)
+					)
+					del db["servers"][guildId]["nicknames"][messageId]
+					db.save()
+				elif str(reaction) == "👎":
+					await reaction.message.edit(
+						embed=discord.Embed(
+							title="Nickname Requested!",
+							description="<@" + userId + "> requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "`",
+							color=0xcc0000
+						).set_footer(text="Denied by " + str(user))
+					)
+					await client.get_user(db["servers"][guildId]["nicknames"][messageId]["userId"]).send(
+						embed=discord.Embed(
+							title="Nickname Denied!",
+							description="You requested the nickname `" + db["servers"][guildId]["nicknames"][messageId]["nickname"] + "` and it has been denied.",
+							color=0xcc0000
+						)
+					)
+					del db["servers"][guildId]["nicknames"][messageId]
+					db.save()
+
 
 
 server.s()
