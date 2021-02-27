@@ -333,7 +333,7 @@ async def help(ctx, catagory=None):
 			await ctx.send(
 				embed=discord.Embed(
 					title="Error",
-					description="Category "" + catagory + "" not found.",
+					description="Category '" + catagory + "' not found.",
 					color=0xcc0000
 				)
 			)
@@ -843,7 +843,20 @@ async def infractions(ctx, *, member: discord.Member=None):
 		if str(user) in db["servers"][str(guild)]["infractions"]:
 			infractions = db["servers"][str(guild)]["infractions"][str(user)]
 
-			warns = "**__Warns__**\n"
+			overview = "**__Info__**\nWarnings: "
+			if db["servers"][str(guild)]["auto_strike"] == 0:
+				overview += "**" + str(len(infractions["warns"])) + "**\n"
+			else:
+				overview += "**" + str(len(infractions["warns"]) % db["servers"][str(guild)]["auto_strike"]) + " / " + str(db["servers"][str(guild)]["auto_strike"]) + "**\n"
+			overview += "Strikes: "
+			if db["servers"][str(guild)]["auto_ban"] == 0:
+				overview += "**" + str(len(infractions["strikes"])) + "**\n"
+			else:
+				overview += "**" + str(len(infractions["strikes"]) % db["servers"][str(guild)]["auto_ban"]) + " / " + str(db["servers"][str(guild)]["auto_ban"]) + "**\n"
+			
+
+			
+			warns = "\n**__Warns__**\n"
 			for warn in infractions["warns"]:
 				newWarn = "Warn id: **" + warn + "**\nReason: **" + str(infractions["warns"][warn]["reason"]) + "**\nDate: **" + datetime.datetime.fromtimestamp(infractions["warns"][warn]["time"]).strftime("%d/%m/%y %H:%M") + "**\n\n"
 				if len(warns + newWarn) < 2040:
@@ -852,11 +865,12 @@ async def infractions(ctx, *, member: discord.Member=None):
 					await ctx.author.send(
 						embed=discord.Embed(
 							title=username + "'s infractions",
-							description=warns,
+							description=overview + warns,
 							color=0x00cc00
 						).set_thumbnail(url=pfp(user))
 					)
 					warns = newWarn
+					overview = ""
 
 			if warns == "**__Warns__**\n":
 				warns += "Member has never been warned."
@@ -870,11 +884,12 @@ async def infractions(ctx, *, member: discord.Member=None):
 					await ctx.author.send(
 						embed=discord.Embed(
 							title=username + "'s infractions",
-							description=warns + strikes,
+							description=overview + warns + strikes,
 							color=0x00cc00
 						).set_thumbnail(url=pfp(user))
 					)
 					strikes = newStrike
+					overview = ""
 					warns = ""
 
 			if strikes == "**__Strikes__**\n":
@@ -883,7 +898,7 @@ async def infractions(ctx, *, member: discord.Member=None):
 			await ctx.author.send(
 				embed=discord.Embed(
 					title=username + "'s infractions",
-					description=warns + "\n\n" + strikes,
+					description=overview + warns + strikes,
 					color=0x00cc00
 				).set_thumbnail(url=pfp(user))
 			)
@@ -1284,6 +1299,8 @@ async def on_reaction_add(reaction, user):
 								color=0x00cc00
 							)
 						)
+						for r in reaction.message.reactions:
+							await reaction.message.clear_reaction(r)
 						del db["servers"][guildId]["nicknames"][messageId]
 						db.save()
 					except discord.errors.Forbidden:
@@ -1311,6 +1328,8 @@ async def on_reaction_add(reaction, user):
 					)
 					del db["servers"][guildId]["nicknames"][messageId]
 					db.save()
+					for r in reaction.message.reactions:
+						await reaction.message.clear_reaction(r)
 
 
 
