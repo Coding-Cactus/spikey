@@ -290,6 +290,8 @@ async def help(ctx, catagory=None):
 				embed.add_field(name="config_mute", value="Choose which role to be addded to a member when muted.\nIn the form `+config_mute Role`.", inline=False)
 				embed.add_field(name="config_warn_mute", value="Choose for how long a member will be muted after being warned.\nIn the form `+config_warn_mute time`.", inline=False)
 				embed.add_field(name="config_strike_mute", value="Choose for how long a member will be muted after being struck.\nIn the form `+config_strike_mute time`.", inline=False)
+				embed.add_field(name="config_auto_strike", value="Choose how many warnings until a member gets automatically struck.\nIn the form `+config_auto_strike integer`.", inline=False)
+				embed.add_field(name="config_auto_ban", value="Choose how many strikes until a member gets automatically banned.\nIn the form `+config_auto_ban integer`.", inline=False)
 				embed.add_field(name="config_nicknames", value="Choose to which channel I should send the nickname requests.\nIn the form `+config_nicknames TextChannel`.", inline=False)
 				embed.set_footer(text="These commands can only be used by server admins")
 			elif catagory == "infractions":

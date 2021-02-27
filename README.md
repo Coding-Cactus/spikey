@@ -13,6 +13,8 @@
 - `+config_mute Role` Choose which role to be added to a member when muted
 - `+config_warn_mute time` Choose for how long a member will be muted after being warned
 - `+config_strike_mute time` Choose for how long a member will be muted after being struck
+- `+config_auto_strike integer` Choose how many warnings until a member is automatically struck
+- `+config_auto_ban integer` Choose how many strikes until a member is automatically banned
 - `+config_nicknames TextChannel` Choose to which channel the nickname requests are sent
 
 
