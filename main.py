@@ -494,19 +494,28 @@ async def config_auto_strike(ctx, num=None):
 		if num != None:
 			try:
 				num = int(num)
-				correct = num > 0
+				correct = num >= 0
 			except:
 				correct = False
 			if correct:
 				db["servers"][str(ctx.guild.id)]["auto_strike"] = num
 				db.save()
-				await ctx.send(
-					embed=discord.Embed(
-						title="Auto Strike Configured!",
-						description="If a member recieves " + str(num) + " warnings, they will be struck",
-						color=0x00cc00
+				if num != 0:
+					await ctx.send(
+						embed=discord.Embed(
+							title="Auto Strike Configured!",
+							description="If a member recieves " + str(num) + " warnings, they will be struck",
+							color=0x00cc00
+						)
 					)
-				)
+				else:
+					await ctx.send(
+						embed=discord.Embed(
+							title="Auto Strike Configured!",
+							description="Auto Strike has been disabled",
+							color=0x00cc00
+						)
+					)					
 			else:
 				await ctx.send(
 					embed=discord.Embed(
@@ -539,19 +548,28 @@ async def config_auto_ban(ctx, num=None):
 		if num != None:
 			try:
 				num = int(num)
-				correct = num > 0
+				correct = num >= 0
 			except:
 				correct = False
 			if correct:
 				db["servers"][str(ctx.guild.id)]["auto_ban"] = num
 				db.save()
-				await ctx.send(
-					embed=discord.Embed(
-						title="Auto Ban Configured!",
-						description="If a member recieves " + str(num) + " strikes, they will be banned",
-						color=0x00cc00
+				if num != 0:
+					await ctx.send(
+						embed=discord.Embed(
+							title="Auto Ban Configured!",
+							description="If a member recieves " + str(num) + " strikes, they will be banned",
+							color=0x00cc00
+						)
 					)
-				)
+				else:
+					await ctx.send(
+						embed=discord.Embed(
+							title="Auto Ban Configured!",
+							description="Auto Ban has been disabled",
+							color=0x00cc00
+						)
+					)
 			else:
 				await ctx.send(
 					embed=discord.Embed(
@@ -612,15 +630,20 @@ async def config_nicknames(ctx, *, channel: discord.TextChannel=None):
 
 async def check_auto_ban(ctx, member):
 	guildID = str(ctx.guild.id)
+	autoStrikes = 0
+	if db["servers"][guildID]["auto_strike"] != 0:
+		autoStrikes = len(db["servers"][guildID]["infractions"][str(member.id)]["warns"]) // db["servers"][guildID]["auto_strike"]
 	if db["servers"][guildID]["auto_ban"] != 0:
-		if len(db["servers"][guildID]["infractions"][str(member.id)]["warns"]) >= db["servers"][guildID]["auto_ban"]:
-			await member.send(
-				embed=discord.Embed(
-					title="Ban",
-					description="You have been automatically bannes as you have **" + str(len(db["servers"][guildID]["infractions"][str(member.id)]["strikes"])) + " strikes**",
-					color=0xcc0000
+		if len(db["servers"][guildID]["infractions"][str(member.id)]["strikes"]) + autoStrikes >= db["servers"][guildID]["auto_ban"]:
+			try:
+				await member.send(
+					embed=discord.Embed(
+						title="Ban",
+						description="You have been automatically banned as you have **" + str(len(db["servers"][guildID]["infractions"][str(member.id)]["strikes"])) + " strikes**",
+						color=0xcc0000
+					)
 				)
-			)
+			except: None
 			await ctx.guild.ban(member, reason=str(len(db["servers"][guildID]["infractions"][str(member.id)]["strikes"])) + " strikes")
 
 
@@ -628,13 +651,15 @@ async def check_auto_strike(ctx, member):
 	guildID = str(ctx.guild.id)
 	if db["servers"][guildID]["auto_strike"] != 0:
 		if len(db["servers"][guildID]["infractions"][str(member.id)]["warns"]) % db["servers"][guildID]["auto_strike"] == 0:
-			await member.send(
-				embed=discord.Embed(
-					title="Strike",
-					description="You have been automatically struck as you have **" + str(len(db["servers"][guildID]["infractions"][str(member.id)]["warns"])) + " warnings**",
-					color=0xcc0000
+			try:
+				await member.send(
+					embed=discord.Embed(
+						title="Strike",
+						description="You have been automatically struck as you have **" + str(len(db["servers"][guildID]["infractions"][str(member.id)]["warns"])) + " warnings**",
+						color=0xcc0000
+					)
 				)
-			)
+			except: None
 			duration = db["servers"][guildID]["strike_mute"]
 			if duration != 0:
 				role = await get_role_from_id(ctx.guild, db["servers"][guildID]["mute"])
@@ -660,7 +685,7 @@ async def check_auto_strike(ctx, member):
 async def warn(ctx, member: discord.Member=None, *, reason=None):
 	if ctx.message.author.guild_permissions.manage_messages:
 		if member != None:
-			if len(reason) < 2000:
+			if reason == None or len(reason) < 2000:
 				if str(member.id) not in db["servers"][str(ctx.guild.id)]["infractions"]:
 					db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]= {
 						"warns":{},
@@ -685,7 +710,7 @@ async def warn(ctx, member: discord.Member=None, *, reason=None):
 						color=0xcc0000
 					)
 				)
-				message = "You have been warned for **" + reason + "**"
+				message = "You have been warned for **" + str(reason) + "**"
 				role = "error"
 				duration = db["servers"][str(ctx.guild.id)]["warn_mute"]
 				if duration != 0:
@@ -707,13 +732,15 @@ async def warn(ctx, member: discord.Member=None, *, reason=None):
 					)
 				if role != "error":
 					message += "\nYou have been muted for **" + str(timestamp_to_display(db["servers"][str(ctx.guild.id)]["warn_mute"])) + "**"
-				await member.send(
-					embed=discord.Embed(
-						title="Warn",
-						description=message,
-						color=0xcc0000
+				try:
+					await member.send(
+						embed=discord.Embed(
+							title="Warn",
+							description=message,
+							color=0xcc0000
+						)
 					)
-				)
+				except: None
 				await check_auto_strike(ctx, member)
 			else:
 				await ctx.send(
@@ -746,7 +773,7 @@ async def warn(ctx, member: discord.Member=None, *, reason=None):
 async def strike(ctx, member: discord.Member=None, *, reason=None):
 	if ctx.message.author.guild_permissions.manage_messages:
 		if member != None:
-			if len(reason) < 2000:
+			if reason == None or len(reason) < 2000:
 				if str(member.id) not in db["servers"][str(ctx.guild.id)]["infractions"]:
 					db["servers"][str(ctx.guild.id)]["infractions"][str(member.id)]= {
 						"warns":{},
@@ -771,7 +798,7 @@ async def strike(ctx, member: discord.Member=None, *, reason=None):
 						color=0xcc0000
 					)
 				)
-				message = "You have been struck for **" + reason + "**"
+				message = "You have been struck for **" + str(reason) + "**"
 				role = "error"
 				duration = db["servers"][str(ctx.guild.id)]["strike_mute"]
 				if duration != 0:
@@ -793,13 +820,15 @@ async def strike(ctx, member: discord.Member=None, *, reason=None):
 					)
 				if role != "error":
 					message += "\nYou have been muted for **" + str(timestamp_to_display(db["servers"][str(ctx.guild.id)]["strike_mute"])) + "**"
-				await member.send(
-					embed=discord.Embed(
-						title="Strike",
-						description=message,
-						color=0xcc0000
+				try:
+					await member.send(
+						embed=discord.Embed(
+							title="Strike",
+							description=message,
+							color=0xcc0000
+						)
 					)
-				)
+				except: None
 				await check_auto_ban(ctx, member)
 			else:				
 				await ctx.send(
@@ -844,6 +873,9 @@ async def infractions(ctx, *, member: discord.Member=None):
 	if correct:
 		if str(user) in db["servers"][str(guild)]["infractions"]:
 			infractions = db["servers"][str(guild)]["infractions"][str(user)]
+			autoStrikes = 0
+			if db["servers"][str(guild)]["auto_strike"] != 0:
+				autoStrikes = len(infractions["warns"]) // db["servers"][str(guild)]["auto_strike"]
 
 			overview = "**__Info__**\nWarnings: "
 			if db["servers"][str(guild)]["auto_strike"] == 0:
@@ -852,10 +884,11 @@ async def infractions(ctx, *, member: discord.Member=None):
 				overview += "**" + str(len(infractions["warns"]) % db["servers"][str(guild)]["auto_strike"]) + " / " + str(db["servers"][str(guild)]["auto_strike"]) + "**\n"
 			overview += "Strikes: "
 			if db["servers"][str(guild)]["auto_ban"] == 0:
-				overview += "**" + str(len(infractions["strikes"])) + "**\n"
+				overview += "**" + str(len(infractions["strikes"]) +autoStrikes) + "**\n"
 			else:
-				overview += "**" + str(len(infractions["strikes"]) % db["servers"][str(guild)]["auto_ban"]) + " / " + str(db["servers"][str(guild)]["auto_ban"]) + "**\n"
-			
+				overview += "**" + str(len(infractions["strikes"]) + autoStrikes) + " / " + str(db["servers"][str(guild)]["auto_ban"]) + "**\n"
+			if db["servers"][str(guild)]["auto_strike"] != 0:
+				overview += "Auto strikes: **" + str(autoStrikes) + "**\n"			
 
 			
 			warns = "\n**__Warns__**\n"
