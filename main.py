@@ -115,16 +115,19 @@ async def loop():
 		await asyncio.sleep(10)
 
 async def check_mutes():
+	db.load()
 	now = time.time()
 	removeMutes = {}
 	for guild in db["servers"]:
-		removeMutes[guild] = []
-		for muted in db["servers"][guild]["mutes"]:
-			if db["servers"][guild]["mutes"][muted]["duration"] != "indefinite":
-				if db["servers"][guild]["mutes"][muted]["start"] + db["servers"][guild]["mutes"][muted]["duration"] <= now:
-					target = await get_member_from_id(await get_guild_from_id(guild), muted)
-					await target.remove_roles(await get_role_from_id(await get_guild_from_id(guild), db["servers"][guild]["mute"]))
-					removeMutes[str((await get_guild_from_id(guild)).id)].append(str(target.id))
+		if await get_guild_from_id(guild) != "error":
+			removeMutes[guild] = []
+			for muted in db["servers"][guild]["mutes"]:
+				if client.get_user(int(muted)) != None:
+					if db["servers"][guild]["mutes"][muted]["duration"] != "indefinite":
+						if db["servers"][guild]["mutes"][muted]["start"] + db["servers"][guild]["mutes"][muted]["duration"] <= now:
+							target = await get_member_from_id(await get_guild_from_id(guild), muted)
+							await target.remove_roles(await get_role_from_id(await get_guild_from_id(guild), db["servers"][guild]["mute"]))
+							removeMutes[str((await get_guild_from_id(guild)).id)].append(str(target.id))
 	for guild in removeMutes:
 		for member in removeMutes[guild]:
 			del db["servers"][guild]["mutes"][member]
