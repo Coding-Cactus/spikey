@@ -320,7 +320,7 @@ async def help(ctx, catagory=None):
 					color=0x00cc00
 				)
 				embed.add_field(name="mute", value="Make a member shut up.\nIn the form `+mute Member <time>`, if a time is omitted, then they will be muted indefinitely.", inline=False)
-				embed.add_field(name="unmute", value="Allow a member to speak again.\nIn the form `+mute Member`.", inline=False)
+				embed.add_field(name="unmute", value="Allow a member to speak again.\nIn the form `+unmute Member`.", inline=False)
 				embed.add_field(name="view_mutes", value="View your current mutes across all the servers that I am in. Must allow DMs from me.", inline=False)
 				embed.add_field(name="view_servers_mutes", value="View the current mutes in this server. Must allow DMs from me.", inline=False)
 				embed.set_footer(text="These commands can only be used by server moderators (except the view_mutes command)")
